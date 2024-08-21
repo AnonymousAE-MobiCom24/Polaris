@@ -1,1 +1,1 @@
-# Polaris
+# The source code of the artifact submission for Polaris (MobiCom'24)
