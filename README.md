@@ -15,8 +15,11 @@ We have built an end-to-end system of Polaris and tested it extensively in real-
 
 # Setup
 To use Polaris, the following steps are required:
+* [Buildin the hardware](#building-the-hardware)
+* [Programing the sensor array](#programing-the-sensor-array)
+* [Running the sensing pipeline](#running-the-sensing-pipeline)
 
-## Hardware implementation
+## Building the hardware
 We provide the hardware requirements and manufacturing details of Polaris' sensing array in `/PCBs`, please see the related [README](./PCBs/README.md) file.
 
 ## Programing the sensor array
@@ -38,7 +41,7 @@ Once completed, you will be able to access the board information by clicking on 
 ### Programing the sensor array
 
 
-## Run the sensing pipeline
+## Running the sensing pipeline
 
 
 # Run a quick demo
