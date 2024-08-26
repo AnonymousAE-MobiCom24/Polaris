@@ -21,12 +21,24 @@ We provide the hardware requirements and manufacturing details of Polaris' sensi
 
 ## Programing the sensor array
 Based on the hardware, we use Arduino IDE for programing the sensor array.
+
 ### Arduino IDE setup
+Arduino IDE is used for programing the sensor array.
+1. Download and install [Arduino IDE](https://www.arduino.cc/en/software)
+2. Set up the Arduino IDE for the nRF52 Development Board, according to the [official instruction](https://learn.adafruit.com/bluefruit-nrf52-feather-learning-guide/arduino-bsp-setup).
+Once completed, you will be able to access the board information by clicking on the 'Tools' menu
+  ![plot](./Imgs/nRF52_arduino_configuration.png)
+3. Install the Adafruit MLX90393 Library for the Arduino IDE:
+    - Click 'Sketch' --> 'Include Library' --> 'Manage Libraries...'
+    ![plot](./Imgs/sensor_arduino_library.png)
+    - Search for Adafruit MLX90393, and install the Adafruit MLX90393 library:
+    ![plot](./Imgs/install_MLX90393_library.png)
+
 
 ### Programing the sensor array
 
 
-## Sensing pipeline
+## Run the sensing pipeline
 
 
 # Run a quick demo
