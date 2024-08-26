@@ -1,4 +1,4 @@
-# The source code of the artifact submission for Polaris (MobiCom'24)
+# The source code of the artifact submission for Polaris in MobiCom'24
 
 This repository contains the artifacts and guidelines for ACM Badging in the MobiCom 2024 proceedings.
 
@@ -13,8 +13,17 @@ We have built an end-to-end system of Polaris and tested it extensively in real-
 ![plot](./Imgs/illustration.png)
 
 
-## Hardware requirements
+## Setup
+To use Polaris, the following steps are required:
+
+### Hardware implementation
+We provide the hardware requirements and manufacturing details of Polaris' sensing array in `/PCBs`, please see the related [README](./PCBs/README.md) file.
+
+### Programing the sensor array
+Based on the hardware, we use Arduino IDE for programing the sensor array.
+
+### Sensing pipeline
 
 
-
-## Software requirements
+## Run a quick demo
+You can find a quick demo in the `/Quick_Demo` directory. For more information, please refer to the related [README](./Quick_Demo/README.md) file.
