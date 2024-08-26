@@ -21,6 +21,10 @@ We provide the hardware requirements and manufacturing details of Polaris' sensi
 
 ### Programing the sensor array
 Based on the hardware, we use Arduino IDE for programing the sensor array.
+#### Arduino IDE setup
+
+#### Programing the sensor array
+
 
 ### Sensing pipeline
 
