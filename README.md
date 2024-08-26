@@ -10,7 +10,7 @@ Its core design includes: (1) a novel digital modulation scheme, Magnetic Orient
 Our design also equips Polaris with three key features: sufficient encoding capacity, robust detection accuracy, and low energy consumption. 
 We have built an end-to-end system of Polaris and tested it extensively in real-world scenarios. The testing results have shown Polaris to achieve an accuracy of up to 0.58 mm and 1&deg; in posture estimation with a power consumption of only 25.08 mW.
 
-![plot](./Img/illustration.png)
+![plot](./Imgs/illustration.png)
 
 
 ## Hardware requirements
