@@ -15,7 +15,7 @@ We have built an end-to-end system of Polaris and tested it extensively in real-
 
 # Setup
 To use Polaris, the following steps are required:
-* [Buildin the hardware](#building-the-hardware)
+* [Building the hardware](#building-the-hardware)
 * [Programing the sensor array](#programing-the-sensor-array)
 * [Running the sensing pipeline](#running-the-sensing-pipeline)
 
@@ -23,10 +23,8 @@ To use Polaris, the following steps are required:
 We provide the hardware requirements and manufacturing details of Polaris' sensing array in `/PCBs`, please see the related [README](./PCBs/README.md) file.
 
 ## Programing the sensor array
-Based on the hardware, we use Arduino IDE for programing the sensor array.
-
+Based on the hardware, we use Arduino IDE to program the sensor array.
 ### Arduino IDE setup
-Arduino IDE is used for programing the sensor array.
 1. Download and install [Arduino IDE](https://www.arduino.cc/en/software)
 2. Set up the Arduino IDE for the nRF52 Development Board, according to the [official instruction](https://learn.adafruit.com/bluefruit-nrf52-feather-learning-guide/arduino-bsp-setup).
 Once completed, you will be able to access the board information by clicking on the 'Tools' menu
@@ -39,6 +37,7 @@ Once completed, you will be able to access the board information by clicking on 
 
 
 ### Programing the sensor array
+to activate the 
 
 
 ## Running the sensing pipeline
