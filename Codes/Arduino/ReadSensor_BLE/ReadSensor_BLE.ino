@@ -7,6 +7,7 @@
 #define num 3
 
 Adafruit_MLX90393 sensor[num];
+// CS pins
 int CS[num] = {2, 3, 4};
 
 // BLE Service
@@ -129,7 +130,6 @@ void startAdv(void)
 
 void loop()
 { 
-  int start_time = micros();
    Serial.println("###################");
    for(int i = 0; i < num; ++i){
       sensor[i].startSingleMeasurement();
@@ -155,9 +155,6 @@ void loop()
 
     // Send to PC using BLE
     bleuart.write((byte*)(data_array), num*3*4);
-    int elapsed_time = micros() - start_time;
-    Serial.print(1000000 / elapsed_time);
-    Serial.println(" Hz");
 }
 
 // callback invoked when central connects
