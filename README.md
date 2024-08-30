@@ -44,15 +44,17 @@ Note that this programming process is only required once for a new sensor array.
     ![plot](./Imgs/JLink_hardware_setup.jpg)
     - Open the Arduino IDE --> Click 'Tools' --> Click 'Programmer' --> Choose 'J-Link for Bluefruit nRF52'
     ![plot](./Imgs/JLink_step2.png)
-    - Click 'Tools' --> Click 'Burn Bootloader'. 
-    When you see the following messages, it indicates that the MCU has been programmed successfully.
+    - Click 'Tools' --> Click 'Burn Bootloader'. When you see the following messages, it indicates that the MCU has been programmed successfully.
     ![plot](./Imgs/JLink_result.png)
 
 
 2. Once the MCU is programmed, one can remove the J-Link module and upload the Arduino code via the Arduino IDE to activate the reading of magnetometers.
-    - Connect the flashing module and the targeted sensor array to the PC
-    - Choose the sensing code. We provide both the BLE and wired sensing code in `/Arduino` directory, please see the related file
+    - Connect the flashing module and the targeted sensor array to the PC, make sure the information (e.g., 'Board', 'Port', 'Programmer') in Arduino IDE  is correct. 
+     ![plot](./Imgs/flashing_process_1.png)
+    - Select the sensing code. 
+    We provide both the BLE and wired sensing code in `/Arduino` directory, please see the related file.
     - Upload the corresponding Arduino code to the sensor array using the Arduino IDE
+      
 
 3. Check the programming result
 
