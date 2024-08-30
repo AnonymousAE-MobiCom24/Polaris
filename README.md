@@ -41,16 +41,22 @@ Using the hardware and Arduino IDE, users can program the sensor array by follow
 1. The MCU (i.e., MDBT42Q-512KV2 module) includes a Nordic nRF52832 chip. Since the module comes with a blank chip, users need to program it themselves using a J-Link programmer during the first setup.
 Note that this programming process is only required once for a new sensor array.
     - In our prototype, we use a [J-Link EDU Mini](https://www.segger.com/products/debug-probes/j-link/models/j-link-edu-mini/) for programming, one can follow the following hardware setup:
-    ![plot](./Imgs/sensor_arduino_library.png)
-    - Open the Arduino IDE --> Click 'Sketch' --> 'Include Library' -->
-    ![plot](./Imgs/sensor_arduino_library.png)
-    - When you see the following messages, it indicates that the MCU has been programmed successfully.
-    ![plot](./Imgs/sensor_arduino_library.png)
+    ![plot](./Imgs/JLink_hardware_setup.jpg)
+    - Open the Arduino IDE --> Click 'Tools' --> Click 'Programmer' --> Choose 'J-Link for Bluefruit nRF52'
+    ![plot](./Imgs/JLink_step2.png)
+    - Click 'Tools' --> Click 'Burn Bootloader'. 
+    When you see the following messages, it indicates that the MCU has been programmed successfully.
+    ![plot](./Imgs/JLink_result.png)
 
 
-2. Once the MCU is programmed, one can upload the Arduino code via the Arduino IDE to activate the reading of magnetometers.
-    - Choose . We provide both the BLE and wired sensing code in `/Arduino`, please see the related file. 
-    - Upload the Arduino code
+2. Once the MCU is programmed, one can remove the J-Link module and upload the Arduino code via the Arduino IDE to activate the reading of magnetometers.
+    - Connect the flashing module and the targeted sensor array to the PC
+    - Choose the sensing code. We provide both the BLE and wired sensing code in `/Arduino` directory, please see the related file
+    - Upload the corresponding Arduino code to the sensor array using the Arduino IDE
+
+3. Check the programming result
+
+
 
 ## Running the sensing pipeline
 Once the sensor array is programmed, you can run the Polaris' sensing pipeline. You can find the sensing code in the `/Sensing_Pipeline` directory
@@ -58,8 +64,7 @@ Once the sensor array is programmed, you can run the Polaris' sensing pipeline. 
 
 ## Tag fabrication
 In our protetype, we use an ultra-thin and durable PVC plane with 
-a thickness of 0.2 mm as the substrate and Neodymium (NdFeB) 
-magnets.
+a thickness of 0.2 mm as the substrate and Neodymium (NdFeB) magnets.
 To fabricate the tag, we propose a four-step process. For more details, please see Sec.7.2 in our paper
    ![plot](./Imgs/tag_fabrication.png)
 
