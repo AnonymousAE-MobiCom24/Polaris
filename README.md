@@ -68,7 +68,7 @@ Once the sensor array is programmed, you can run the Polaris' sensing pipeline. 
 
 
 
-# Getting Started with Polaris
+# Getting started with Polaris
 To help evaluators/users quickly get started with our Polaris system, we’ve provided an offline version of the sensing algorithm framework. 
 The relevant data and source code can be found in the the `/Evaluation` directory. 
 For more information, please refer to the related [README](./Evaluation/README.md) file.
