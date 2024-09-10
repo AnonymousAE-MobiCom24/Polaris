@@ -17,6 +17,7 @@ We have built an end-to-end system of Polaris and tested it extensively in real-
 To use Polaris, the following steps are required:
 * [Building the hardware](#building-the-hardware)
 * [Programing the sensor array](#programing-the-sensor-array)
+* [Tag fabrication](#tag-fabrication)
 * [Running the sensing pipeline](#running-the-sensing-pipeline)
 
 ## Building the hardware
@@ -55,11 +56,6 @@ To program the sensor array using the hardware and Arduino IDE, follow these ste
 
 3. After successfully programming the Arduino code to the sensor array, you can use the Python code in the '/Read_Raw_Sensor' directory to read the raw sensor data.
 
-
-## Running the sensing pipeline
-Once the sensor array is programmed, you can run the Polaris' sensing pipeline. You can find the sensing code in the `/Sensing_Pipeline` directory, please see the related [README](./Sensing_Pipeline/README.md) file.
-
-
 ## Tag fabrication
 In our protetype, we use an ultra-thin and durable PVC plane with 
 a thickness of 0.2 mm as the substrate and Neodymium (NdFeB) magnets.
@@ -67,8 +63,12 @@ To fabricate the tag, we propose a four-step process.
 For more details, please see Sec.7.2 in the paper.
 ![plot](./Imgs/tag_fabrication.png)
 
+## Running the sensing pipeline
+Once the sensor array is programmed, you can run the Polaris' sensing pipeline. You can find the sensing code in the `/Sensing_Pipeline` directory, please see the related [README](./Sensing_Pipeline/README.md) file.
 
-# Run a quick evaluation
+
+
+# Getting Started with Polaris
 To help evaluators/users quickly get started with our Polaris system, we’ve provided an offline version of the sensing algorithm framework. 
 The relevant data and source code can be found in the the `/Evaluation` directory. 
 For more information, please refer to the related [README](./Evaluation/README.md) file.
