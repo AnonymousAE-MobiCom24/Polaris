@@ -68,5 +68,7 @@ For more details, please see Sec.7.2 in the paper.
 ![plot](./Imgs/tag_fabrication.png)
 
 
-# Run a quick demo
-You can find a quick demo in the `/Quick_Demo` directory. For more information, please refer to the related [README](./Quick_Demo/README.md) file.
+# Run a quick evaluation
+To help evaluators/users quickly get started with our Polaris system, we’ve provided an offline version of the sensing algorithm framework. 
+The relevant data and source code can be found in the the `/Evaluation` directory. 
+For more information, please refer to the related [README](./Evaluation/README.md) file.
