@@ -1,20 +1,3 @@
-/*
- * SPDX-FileCopyrightText: 2021 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: Unlicense OR CC0-1.0
- */
-
-
-
-/****************************************************************************
-*
-* This demo showcases BLE GATT client. It can scan BLE devices and connect to one device.
-* Run the gatt_server demo, the client demo will automatically connect to the gatt_server demo.
-* Client demo will enable gatt_server's notify after connection. The two devices will then exchange
-* data.
-*
-****************************************************************************/
-
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
@@ -23,10 +6,9 @@
 #include <math.h>
 #include <assert.h>
 #include <inttypes.h>
-
-#include "freertos/FreeRTOS.h"
+#include <Windows.h>
+#include <tchar.h>
 #include "time.h"
-#include "freertos/task.h"
 
 
 #define BYTES_PER_LINE 36
@@ -202,19 +184,10 @@ double get_traceback(int n1, int n2, double ddtw[][n2 - 2], int ddtw_traceback[]
 
 int load_template(int tem_length, int data_points, int axis_num, double data[][data_points][axis_num])
 {
-
-    esp_vfs_spiffs_conf_t config = {
-      .base_path = "/spiffs",
-      .partition_label = NULL,
-      .max_files = 5,
-      .format_if_mount_failed = true,
-    };
-    esp_vfs_spiffs_register(&config);
-
-    FILE *file = fopen("/spiffs/template_8_1.txt", "r");
+    FILE *file = fopen("template_36_5_80.txt", "r");
     if(file ==NULL)
     {
-        ESP_LOGE(TAG,"File does not exist!");
+       printf("No file!\n");
         // return 0;
     }
 
@@ -234,7 +207,6 @@ int load_template(int tem_length, int data_points, int axis_num, double data[][d
             layer++;
         }
         fclose(file);
-        esp_vfs_spiffs_unregister(NULL);
     }
     return 0;
 }
@@ -339,7 +311,6 @@ double DDTW_matching_res(double signal_1[][N], int ang_gran, int dis_gran, int t
 
 
 // localize algorithm
-
 const double pi = 3.14159265358979323846;
 // Parameter we want to sovle
 const int N_2 = 1;
@@ -445,7 +416,7 @@ void nelder_mead_minimization(double x[], double amp1[3], double amp2[3], double
     double simplex[N_2+1][N_2], f[N_2+1];
     double alpha = 1.0, gamma = 1.0, rho = 0.5, sigma = 0.5;
     double epsilon = 1e-2;  // Tolerance for convergence
-    int iter, max_iter =3;
+    int iter, max_iter = 100;
     
     // Initialize simplex with initial guess x
     for (int i = 0; i <= N_2; i++) {
@@ -962,312 +933,364 @@ double amp_tol = 0.0;
 double amp_tol_ddtw[20][3];
 struct MagnetInfo magnetInfo;
 
-        for (int i = 0; i < BYTES_PER_LINE/sizeof(float)/3; i ++) {
-            float *x = (float*)&p_data->notify.value[3 * i * sizeof(float)];
-            float *y = (float*)&p_data->notify.value[3 * i * sizeof(float) + sizeof(float)];
-            float *z = (float*)&p_data->notify.value[3 * i * sizeof(float) + sizeof(float) * 2];
-            // printf("x: %f, y: %f, z: %f\n", *x, *y, *z); 
-            // double total = sqrt(pow(*x, 2) + pow(*y, 2) + pow(*z, 2));
-            sensor_x_data[i] = *x;
-            sensor_y_data[i] = *y;
-            sensor_z_data[i] = *z;
-            // sensor_tol_data[i] = total;       
-        }
+int detect_mag(){
 
+    HANDLE hSerial = CreateFile(COM_PORT, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
-        // peak detection
-        for (int i = 0; i < num; ++i)
+    if (hSerial == INVALID_HANDLE_VALUE)
+    {
+        // Handle error opening the serial port
+        _tprintf(_T("Error opening COM port\n"));
+        return 1;
+    }
+
+    DCB dcbSerialParams = { 0 };
+    dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
+
+    if (!GetCommState(hSerial, &dcbSerialParams))
+    {
+        // Handle error getting serial port state
+        _tprintf(_T("Error getting serial port state\n"));
+        CloseHandle(hSerial);
+        return 1;
+    }
+
+    dcbSerialParams.BaudRate = CBR_115200;  // Adjust baud rate as needed
+    dcbSerialParams.ByteSize = 8;
+    dcbSerialParams.StopBits = ONESTOPBIT;
+    dcbSerialParams.Parity = NOPARITY;
+
+    if (!SetCommState(hSerial, &dcbSerialParams))
+    {
+        // Handle error setting serial port state
+        _tprintf(_T("Error setting serial port state\n"));
+        CloseHandle(hSerial);
+        return 1;
+    }
+
+    while (1)
+    {
+        DWORD bytesRead;
+        char buffer[108];
+        if (ReadFile(hSerial, buffer, sizeof(buffer), &bytesRead, NULL))
         {
-            if(isnan(sensor_tol_data[i]) || sensor_tol_data[i] > 4000)
-                flag = 0;
-        }
-        if(flag)
-        {
-            if (first == 0)
+            // printf("read %d bytes from port:%s\n", bytesRead, buffer);
+            // Process or use the received data as needed
+            // printf("%d", sizeof(float));
+            for (DWORD i = 0; i < bytesRead/sizeof(float)/3; ++i)
             {
-                first = 1;
-                printf("Start detection\n");
+                // Print the received byte
+                  // Interpret the bytes as a float
+                float* floatValue = (float*)&buffer[i * sizeof(float)];
+                printf("Received Float: %f\n", *floatValue);
+    
+                float *x = (float*)&buffer[3 * i * sizeof(float)];
+                float *y = (float*)&buffer[3 * i * sizeof(float) + sizeof(float)];
+                float *z = (float*)&buffer[3 * i * sizeof(float) + 2 * sizeof(float)];
+                // printf("x: %f, y: %f, z: %f\n", *x, *y, *z); 
+                // double total = sqrt(pow(*x, 2) + pow(*y, 2) + pow(*z, 2));
+                sensor_x_data[i] = *x;
+                sensor_y_data[i] = *y;
+                sensor_z_data[i] = *z;
+                // sensor_tol_data[i] = total;     
             }
+
+
+            // peak detection
             for (int i = 0; i < num; ++i)
             {
-                // printf("Sensor %d: x: %f, y: %f, z: %f, total: %f\n", i + 1, sensor_x_data[i], sensor_y_data[i], sensor_z_data[i], sensor_tol_data[i]);
-                double temp_x = sensor_x_data[i] - start_raw_amp_x[i];
-                double temp_y = sensor_y_data[i] - start_raw_amp_y[i];
-                double temp_z = sensor_z_data[i] - start_raw_amp_z[i];
-                // printf("Sensor %d: x: %f, y: %f, z: %f, total: %f\n", i + 1, sensor_x_data[i], sensor_y_data[i], sensor_z_data[i], sensor_tol_data[i]);
-                sensor_tol_data[i] = sqrt(pow(temp_x, 2) + pow(temp_y, 2) + pow(temp_z, 2));
-                appendToDynamicArray(&sensors[i], temp_x, temp_y, temp_z, sensor_tol_data[i]);
-                // appendToDynamicArray(&sensors[i], sensor_x_data[i], sensor_y_data[i], sensor_z_data[i], sensor_tol_data[i]);
+                if(isnan(sensor_tol_data[i]) || sensor_tol_data[i] > 4000)
+                    flag = 0;
             }
-
-            // 1. smooth the data
-            if (cnt < WND)
+            if(flag)
             {
-                for(int i = 0; i < num; ++i)
+                if (first == 0)
                 {
-                    double x = sensors[i].data[cnt].x - start_raw_amp_x[i];
-                    double y = sensors[i].data[cnt].y - start_raw_amp_y[i];
-                    double z = sensors[i].data[cnt].z - start_raw_amp_z[i];
-
-                    double tol = sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
-                    appendToDynamicArray(&smooth_sensors[i], x, y, z, tol);
-                    appendToDynamicArray(&derivative_sensors[i], 0.0, 0.0, 0.0, 0.0);
-                    appendToDynamicArray(&smooth_derivative_sensors[i], 0.0, 0.0, 0.0, 0.0);
+                    first = 1;
+                    printf("Start detection\n");
                 }
-            }
-            else
-            {
-                // 1. smooth the raw data
-                for(int i = 0; i < num; i++)
+                for (int i = 0; i < num; ++i)
                 {
-                    double sum_x = 0.0;
-                    double sum_y = 0.0;
-                    double sum_z = 0.0;
-                    double sum_tol = 0.0;
-                    for (int j = 0; j < WND; j++) {
-                        sum_x += SmoothVector_r[j] * sensors[i].data[cnt - WND + j].x;
-                        sum_y += SmoothVector_r[j] * sensors[i].data[cnt - WND + j].y;
-                        sum_z += SmoothVector_r[j] * sensors[i].data[cnt - WND + j].z;
-                        sum_tol += SmoothVector_r[j] * sensors[i].data[cnt - WND + j].total;
-                    }
-                    // printf("sum_tol: %f\n", sum_tol);
-                    appendToDynamicArray(&smooth_sensors[i], sum_x, sum_y, sum_z, sum_tol);
+                    // printf("Sensor %d: x: %f, y: %f, z: %f, total: %f\n", i + 1, sensor_x_data[i], sensor_y_data[i], sensor_z_data[i], sensor_tol_data[i]);
+                    double temp_x = sensor_x_data[i] - start_raw_amp_x[i];
+                    double temp_y = sensor_y_data[i] - start_raw_amp_y[i];
+                    double temp_z = sensor_z_data[i] - start_raw_amp_z[i];
+                    // printf("Sensor %d: x: %f, y: %f, z: %f, total: %f\n", i + 1, sensor_x_data[i], sensor_y_data[i], sensor_z_data[i], sensor_tol_data[i]);
+                    sensor_tol_data[i] = sqrt(pow(temp_x, 2) + pow(temp_y, 2) + pow(temp_z, 2));
+                    appendToDynamicArray(&sensors[i], temp_x, temp_y, temp_z, sensor_tol_data[i]);
+                    // appendToDynamicArray(&sensors[i], sensor_x_data[i], sensor_y_data[i], sensor_z_data[i], sensor_tol_data[i]);
                 }
 
-                // 2. calculate the derivative
-                for(int i = 0; i < num; i++)
+                // 1. smooth the data
+                if (cnt < WND)
                 {
-                    double last_point = smooth_sensors[i].data[smooth_sensors[i].size-1].total;
-                    double first_point = smooth_sensors[i].data[smooth_sensors[i].size-2].total;
-                    // printf("last_point: %f\n", last_point);
-                    // printf("first_point: %f\n", first_point);
-                    double derivative = (last_point - first_point) / 2.0;
-                    // printf("derivative: %f\n", derivative);
-                    appendToDynamicArray(&derivative_sensors[i], 0.0, 0.0, 0.0, derivative);
-                }
-
-                // 3. smooth the derivative
-                for(int i = 0; i < num; i++)
-                {
-                    double sum_x = 0.0;
-                    double sum_y = 0.0;
-                    double sum_z = 0.0;
-                    double sum_tol = 0.0;
-                    for (int j = 0; j < WND_D; j++) {
-                        // sum_x += SmoothVector_d[j] * derivative_sensors[i].data[cnt - WND_D + j].x;
-                        // sum_y += SmoothVector_d[j] * derivative_sensors[i].data[cnt - WND_D + j].y;
-                        // sum_z += SmoothVector_d[j] * derivative_sensors[i].data[cnt - WND_D + j].z;
-                        sum_tol += SmoothVector_d[j] * derivative_sensors[i].data[cnt - WND_D + j].total;
-                    }
-                    appendToDynamicArray(&smooth_derivative_sensors[i], sum_x, sum_y, sum_z, sum_tol);
-                }
-
-                // 4. peak detection
-                for(int i = 0; i < num; i++)
-                {
-                    S_flag[i] = 0;
-
-                    if(slope_list[i].length == 10)
+                    for(int i = 0; i < num; ++i)
                     {
-                        if(AuxiliaryFlag[i])
-                        {
-                            double tmp = 0.0;
-                            for(int j = 1; j < slope_list[i].length; j++)
-                                tmp += fabs(slope_list[i].data[j]);
-                            slope_thr[i] = amp_thrd[i] * (tmp / (slope_list[i].length - 1));
-                            AuxiliaryFlag[i] = false;
-                            for(int j = 1; j < sensors[i].size; j++)
-                            {
-                                start_raw_amp_x[i] += sensors[i].data[j].x;
-                                start_raw_amp_y[i] += sensors[i].data[j].y;
-                                start_raw_amp_z[i] += sensors[i].data[j].z;
-                            }
-                            start_raw_amp_x[i] /= sensors[i].size;
-                            start_raw_amp_y[i] /= sensors[i].size;
-                            start_raw_amp_z[i] /= sensors[i].size;
-                            printf("Sensor %d: slope_thr = %f\n", i + 1, slope_thr[i]);
-                        }
-                    }
-                    
-                    // Positive peak
-                    double smoothed_1 = smooth_derivative_sensors[i].data[smooth_derivative_sensors[i].size-1].total;
-                    double smoothed_2 = smooth_derivative_sensors[i].data[smooth_derivative_sensors[i].size-2].total;
-                    if(smoothed_1 <= 0.0 && smoothed_2 >= 0.0)
-                    {
-                        double slope = smoothed_1 - smoothed_2;
-                        slope_list[i].length++;
-                        slope_list[i].data = (double *)realloc(slope_list[i].data, slope_list[i].length * sizeof(double));
-                        if (slope_list[i].data == NULL) {
-                            //
-                            fprintf(stderr, "Memory allocation failed.\n");
-                            // return 1;
-                        }
-                        slope_list[i].data[slope_list[i].length - 1] = slope;
-                        // printf("%d", slope_list[i].length);
-                        int raw_index = cnt - WND;
-                        double raw = smooth_sensors[i].data[raw_index].total;
-            
-                        if (slope <= -slope_thr[i])
-                        {
-                            // if(fabs(LastRAW[i]) <= 1e-6)
-                            // {
-                            //     S_flag[i] = 1;
-                            //     no = no + 1;
-                            //     // printf("%d\n", raw_index);
-                            //     // printf("%f\n", slope);
-                            //     printf("Sensor %d: No. %d detect a magnet\n", i + 1, no);
-                            //     // printf("Sensor %d: raw data: %f\n", i + 1, raw);
-                            //         // print x, y, z data
-                            //     printf("Sensor %d: x: %f, y: %f, z: %f\n", i + 1, smooth_sensors[i].data[raw_index].x, smooth_sensors[i].data[raw_index].y, smooth_sensors[i].data[raw_index].z);
+                        double x = sensors[i].data[cnt].x - start_raw_amp_x[i];
+                        double y = sensors[i].data[cnt].y - start_raw_amp_y[i];
+                        double z = sensors[i].data[cnt].z - start_raw_amp_z[i];
 
-                            // }
-                            if(slope_list[i].length > 10)
+                        double tol = sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
+                        appendToDynamicArray(&smooth_sensors[i], x, y, z, tol);
+                        appendToDynamicArray(&derivative_sensors[i], 0.0, 0.0, 0.0, 0.0);
+                        appendToDynamicArray(&smooth_derivative_sensors[i], 0.0, 0.0, 0.0, 0.0);
+                    }
+                }
+                else
+                {
+                    // 1. smooth the raw data
+                    for(int i = 0; i < num; i++)
+                    {
+                        double sum_x = 0.0;
+                        double sum_y = 0.0;
+                        double sum_z = 0.0;
+                        double sum_tol = 0.0;
+                        for (int j = 0; j < WND; j++) {
+                            sum_x += SmoothVector_r[j] * sensors[i].data[cnt - WND + j].x;
+                            sum_y += SmoothVector_r[j] * sensors[i].data[cnt - WND + j].y;
+                            sum_z += SmoothVector_r[j] * sensors[i].data[cnt - WND + j].z;
+                            sum_tol += SmoothVector_r[j] * sensors[i].data[cnt - WND + j].total;
+                        }
+                        // printf("sum_tol: %f\n", sum_tol);
+                        appendToDynamicArray(&smooth_sensors[i], sum_x, sum_y, sum_z, sum_tol);
+                    }
+
+                    // 2. calculate the derivative
+                    for(int i = 0; i < num; i++)
+                    {
+                        double last_point = smooth_sensors[i].data[smooth_sensors[i].size-1].total;
+                        double first_point = smooth_sensors[i].data[smooth_sensors[i].size-2].total;
+                        // printf("last_point: %f\n", last_point);
+                        // printf("first_point: %f\n", first_point);
+                        double derivative = (last_point - first_point) / 2.0;
+                        // printf("derivative: %f\n", derivative);
+                        appendToDynamicArray(&derivative_sensors[i], 0.0, 0.0, 0.0, derivative);
+                    }
+
+                    // 3. smooth the derivative
+                    for(int i = 0; i < num; i++)
+                    {
+                        double sum_x = 0.0;
+                        double sum_y = 0.0;
+                        double sum_z = 0.0;
+                        double sum_tol = 0.0;
+                        for (int j = 0; j < WND_D; j++) {
+                            // sum_x += SmoothVector_d[j] * derivative_sensors[i].data[cnt - WND_D + j].x;
+                            // sum_y += SmoothVector_d[j] * derivative_sensors[i].data[cnt - WND_D + j].y;
+                            // sum_z += SmoothVector_d[j] * derivative_sensors[i].data[cnt - WND_D + j].z;
+                            sum_tol += SmoothVector_d[j] * derivative_sensors[i].data[cnt - WND_D + j].total;
+                        }
+                        appendToDynamicArray(&smooth_derivative_sensors[i], sum_x, sum_y, sum_z, sum_tol);
+                    }
+
+                    // 4. peak detection
+                    for(int i = 0; i < num; i++)
+                    {
+                        S_flag[i] = 0;
+
+                        if(slope_list[i].length == 10)
+                        {
+                            if(AuxiliaryFlag[i])
                             {
-                                if(raw >= delta_thrd[i])
+                                double tmp = 0.0;
+                                for(int j = 1; j < slope_list[i].length; j++)
+                                    tmp += fabs(slope_list[i].data[j]);
+                                slope_thr[i] = amp_thrd[i] * (tmp / (slope_list[i].length - 1));
+                                AuxiliaryFlag[i] = false;
+                                for(int j = 1; j < sensors[i].size; j++)
                                 {
-                                    amp_tol = raw;
-                                    double amp_tmp_x = smooth_sensors[i].data[raw_index].x;
-                                    double amp_tmp_y = smooth_sensors[i].data[raw_index].y;
-                                    double amp_tmp_z = smooth_sensors[i].data[raw_index].z;
-                                    amp_tmp_list[i].x = amp_tmp_x;
-                                    amp_tmp_list[i].y = amp_tmp_y;
-                                    amp_tmp_list[i].z = amp_tmp_z;
-                                    amp_tmp_list[i].total = amp_tol;
-                                    S_flag[i] = 1;
-                                    cur_cnt = cnt;
-                                    flag_mag_det = true;
-                                    no = no + 1;
-                                    // printf("%d\n", raw_index);
-                                    // printf("%f\n", slope);
-                                    printf("Sensor %d: No. %d detect a magnet\n", i + 1, no);
-                                    // print the raw data
-                                    // printf("Sensor %d: raw data: %f\n", i + 1, raw);
-                                    // print x, y, z data
-                                    printf("Sensor %d: x: %f, y: %f, z: %f\n", i + 1, smooth_sensors[i].data[raw_index].x, smooth_sensors[i].data[raw_index].y, smooth_sensors[i].data[raw_index].z);
-                                } 
+                                    start_raw_amp_x[i] += sensors[i].data[j].x;
+                                    start_raw_amp_y[i] += sensors[i].data[j].y;
+                                    start_raw_amp_z[i] += sensors[i].data[j].z;
+                                }
+                                start_raw_amp_x[i] /= sensors[i].size;
+                                start_raw_amp_y[i] /= sensors[i].size;
+                                start_raw_amp_z[i] /= sensors[i].size;
+                                printf("Sensor %d: slope_thr = %f\n", i + 1, slope_thr[i]);
                             }
+                        }
                         
-                        }
-                        else
+                        // Positive peak
+                        double smoothed_1 = smooth_derivative_sensors[i].data[smooth_derivative_sensors[i].size-1].total;
+                        double smoothed_2 = smooth_derivative_sensors[i].data[smooth_derivative_sensors[i].size-2].total;
+                        if(smoothed_1 <= 0.0 && smoothed_2 >= 0.0)
                         {
-                            int forward_points = 20;
-                            // for(int i = 0; i < num; i++)
-                            // {
-                            //     // LastRAW[i] = (np.array(sz[i][raw_index - 15: raw_index-10])).mean()
-                            //     double s = 0.0;
-                            //     int interval = 15;
-                            //     for (int j = 0; j < interval; j++)
-                            //         s += smooth_sensors[i].data[raw_index-40+j].total;
-                            //     LastRAW[i] = s / 15.0;
-                            // }
-                        }     
-                    }
-                }
-
-                // 
-
-                magnetInfo.cur_n = 0;
-                magnetInfo.index_flag[0] = 0;
-                magnetInfo.index_flag[1] = 0;
-                magnetInfo.index_flag[2] = 0;
-                magnetInfo.tmp_data[0].x = 0.0;
-                magnetInfo.tmp_data[0].y = 0.0;
-                magnetInfo.tmp_data[0].z = 0.0;
-                magnetInfo.tmp_data[0].total = 0.0;
-                magnetInfo.tmp_data[1].x = 0.0;
-                magnetInfo.tmp_data[1].y = 0.0;
-                magnetInfo.tmp_data[1].z = 0.0;
-                magnetInfo.tmp_data[1].total = 0.0;
-                magnetInfo.tmp_data[2].x = 0.0;
-                magnetInfo.tmp_data[2].y = 0.0;
-                magnetInfo.tmp_data[2].z = 0.0;
-                magnetInfo.tmp_data[2].total = 0.0;
-
-                if(flag_mag_det)
-                {
-                    //magnet_info
-                    magnetInfo.cur_n = cur_cnt;
-                    magnetInfo.index_flag[0] = S_flag[0];
-                    magnetInfo.index_flag[1] = S_flag[1];
-                    magnetInfo.index_flag[2] = S_flag[2];
-                    magnetInfo.tmp_data[0].x = amp_tmp_list[0].x;
-                    magnetInfo.tmp_data[0].y = amp_tmp_list[0].y;
-                    magnetInfo.tmp_data[0].z = amp_tmp_list[0].z;
-                    magnetInfo.tmp_data[0].total = amp_tmp_list[0].total;
-                    magnetInfo.tmp_data[1].x = amp_tmp_list[1].x;
-                    magnetInfo.tmp_data[1].y = amp_tmp_list[1].y;
-                    magnetInfo.tmp_data[1].z = amp_tmp_list[1].z;
-                    magnetInfo.tmp_data[1].total = amp_tmp_list[1].total;
-                    magnetInfo.tmp_data[2].x = amp_tmp_list[2].x;
-                    magnetInfo.tmp_data[2].y = amp_tmp_list[2].y;
-                    magnetInfo.tmp_data[2].z = amp_tmp_list[2].z;
-                    magnetInfo.tmp_data[2].total = amp_tmp_list[2].total;
-                    flag_mag_det = false;
-                }
-
-                if(magnetInfo.cur_n > 0)
-                {
-                    int tmp_cnt = magnetInfo.cur_n;
-                    int *tmp_ind = magnetInfo.index_flag;
-                    for(int jj = 0; jj < 3; jj++)
-                    {
-                        // sensor i detect a magnet
-                        if(tmp_ind[jj] == 1)
-                        {
-
-                            int after_ind = 10;
-                            // double amp_x_ddtw[30];
-                            // double amp_y_ddtw[30];
-                            // double amp_z_ddtw[30];
-                            
-                            for(int kk = 0; kk < 20; kk++)
-                            {
-                                // amp_x_ddtw[kk] = 
-                                // amp_y_ddtw[kk] = smooth_sensors[jj].data[tmp_cnt-after_ind + kk].y;
-                                // amp_z_ddtw[kk] = smooth_sensors[jj].data[tmp_cnt-after_ind + kk].z;
-                                amp_tol_ddtw[kk][0] = smooth_sensors[jj].data[tmp_cnt-after_ind + kk].x;
-                                amp_tol_ddtw[kk][1] = smooth_sensors[jj].data[tmp_cnt-after_ind + kk].y;
-                                amp_tol_ddtw[kk][2] = smooth_sensors[jj].data[tmp_cnt-after_ind + kk].z;
+                            double slope = smoothed_1 - smoothed_2;
+                            slope_list[i].length++;
+                            slope_list[i].data = (double *)realloc(slope_list[i].data, slope_list[i].length * sizeof(double));
+                            if (slope_list[i].data == NULL) {
+                                //
+                                fprintf(stderr, "Memory allocation failed.\n");
+                                // return 1;
                             }
-                            int ang_gran = 8;
-                            int dis_gran = 1;
-                            int test_points = 20;
-                            int gt_points = 20;
-                            int axis = 3;
-                            double angle = 0;
-                            double start_time = clock();
-                            angle = DDTW_matching_res(amp_tol_ddtw, ang_gran, dis_gran, test_points, gt_points, axis);
-                            printf("Estimated angle is: %lf", angle);
-                            double end_time = clock();
-                            printf("DDTW time: %lf", (end_time - start_time) / CLOCKS_PER_SEC);
+                            slope_list[i].data[slope_list[i].length - 1] = slope;
+                            // printf("%d", slope_list[i].length);
+                            int raw_index = cnt - WND;
+                            double raw = smooth_sensors[i].data[raw_index].total;
+                
+                            if (slope <= -slope_thr[i])
+                            {
+                                // if(fabs(LastRAW[i]) <= 1e-6)
+                                // {
+                                //     S_flag[i] = 1;
+                                //     no = no + 1;
+                                //     // printf("%d\n", raw_index);
+                                //     // printf("%f\n", slope);
+                                //     printf("Sensor %d: No. %d detect a magnet\n", i + 1, no);
+                                //     // printf("Sensor %d: raw data: %f\n", i + 1, raw);
+                                //         // print x, y, z data
+                                //     printf("Sensor %d: x: %f, y: %f, z: %f\n", i + 1, smooth_sensors[i].data[raw_index].x, smooth_sensors[i].data[raw_index].y, smooth_sensors[i].data[raw_index].z);
 
+                                // }
+                                if(slope_list[i].length > 10)
+                                {
+                                    if(raw >= delta_thrd[i])
+                                    {
+                                        amp_tol = raw;
+                                        double amp_tmp_x = smooth_sensors[i].data[raw_index].x;
+                                        double amp_tmp_y = smooth_sensors[i].data[raw_index].y;
+                                        double amp_tmp_z = smooth_sensors[i].data[raw_index].z;
+                                        amp_tmp_list[i].x = amp_tmp_x;
+                                        amp_tmp_list[i].y = amp_tmp_y;
+                                        amp_tmp_list[i].z = amp_tmp_z;
+                                        amp_tmp_list[i].total = amp_tol;
+                                        S_flag[i] = 1;
+                                        cur_cnt = cnt;
+                                        flag_mag_det = true;
+                                        no = no + 1;
+                                        // printf("%d\n", raw_index);
+                                        // printf("%f\n", slope);
+                                        printf("Sensor %d: No. %d detect a magnet\n", i + 1, no);
+                                        // print the raw data
+                                        // printf("Sensor %d: raw data: %f\n", i + 1, raw);
+                                        // print x, y, z data
+                                        printf("Sensor %d: x: %f, y: %f, z: %f\n", i + 1, smooth_sensors[i].data[raw_index].x, smooth_sensors[i].data[raw_index].y, smooth_sensors[i].data[raw_index].z);
+                                    } 
+                                }
+                            
+                            }
+                            else
+                            {
+                                int forward_points = 20;
+                                // for(int i = 0; i < num; i++)
+                                // {
+                                //     // LastRAW[i] = (np.array(sz[i][raw_index - 15: raw_index-10])).mean()
+                                //     double s = 0.0;
+                                //     int interval = 15;
+                                //     for (int j = 0; j < interval; j++)
+                                //         s += smooth_sensors[i].data[raw_index-40+j].total;
+                                //     LastRAW[i] = s / 15.0;
+                                // }
+                            }     
                         }
                     }
-                    double amp1_localize_x = magnetInfo.tmp_data[0].x;
-                    double amp1_localize_y = magnetInfo.tmp_data[0].y;
-                    double amp1_localize_z = magnetInfo.tmp_data[0].z;
-                    double amp1_localize[3] = {amp1_localize_x, amp1_localize_y, amp1_localize_z};
 
-                    double amp3_localize_x = magnetInfo.tmp_data[2].x;
-                    double amp3_localize_y = magnetInfo.tmp_data[2].y;
-                    double amp3_localize_z = magnetInfo.tmp_data[2].z;
-                    double amp3_localize[3] = {amp3_localize_x, amp3_localize_y, amp3_localize_z};
-                    double sol[1] = {0};
-                    double start_time = clock();
-                    ComputeD(amp1_localize, amp3_localize, 0, 1, 3, 10, 8, sol);
-                    double end_time = clock();
-                    printf("Localize time: %lf", (end_time - start_time) / CLOCKS_PER_SEC);
-                    printf("Localize result: %lf", sol[0]);
-                    // freeMagnetInfo(magnetInfo);
-                    // initMagnetInfo(magnetInfo, 5);
+                    // 
+
+                    magnetInfo.cur_n = 0;
+                    magnetInfo.index_flag[0] = 0;
+                    magnetInfo.index_flag[1] = 0;
+                    magnetInfo.index_flag[2] = 0;
+                    magnetInfo.tmp_data[0].x = 0.0;
+                    magnetInfo.tmp_data[0].y = 0.0;
+                    magnetInfo.tmp_data[0].z = 0.0;
+                    magnetInfo.tmp_data[0].total = 0.0;
+                    magnetInfo.tmp_data[1].x = 0.0;
+                    magnetInfo.tmp_data[1].y = 0.0;
+                    magnetInfo.tmp_data[1].z = 0.0;
+                    magnetInfo.tmp_data[1].total = 0.0;
+                    magnetInfo.tmp_data[2].x = 0.0;
+                    magnetInfo.tmp_data[2].y = 0.0;
+                    magnetInfo.tmp_data[2].z = 0.0;
+                    magnetInfo.tmp_data[2].total = 0.0;
+
+                    if(flag_mag_det)
+                    {
+                        //magnet_info
+                        magnetInfo.cur_n = cur_cnt;
+                        magnetInfo.index_flag[0] = S_flag[0];
+                        magnetInfo.index_flag[1] = S_flag[1];
+                        magnetInfo.index_flag[2] = S_flag[2];
+                        magnetInfo.tmp_data[0].x = amp_tmp_list[0].x;
+                        magnetInfo.tmp_data[0].y = amp_tmp_list[0].y;
+                        magnetInfo.tmp_data[0].z = amp_tmp_list[0].z;
+                        magnetInfo.tmp_data[0].total = amp_tmp_list[0].total;
+                        magnetInfo.tmp_data[1].x = amp_tmp_list[1].x;
+                        magnetInfo.tmp_data[1].y = amp_tmp_list[1].y;
+                        magnetInfo.tmp_data[1].z = amp_tmp_list[1].z;
+                        magnetInfo.tmp_data[1].total = amp_tmp_list[1].total;
+                        magnetInfo.tmp_data[2].x = amp_tmp_list[2].x;
+                        magnetInfo.tmp_data[2].y = amp_tmp_list[2].y;
+                        magnetInfo.tmp_data[2].z = amp_tmp_list[2].z;
+                        magnetInfo.tmp_data[2].total = amp_tmp_list[2].total;
+                        flag_mag_det = false;
+                    }
+
+                    if(magnetInfo.cur_n > 0)
+                    {
+                        int tmp_cnt = magnetInfo.cur_n;
+                        int *tmp_ind = magnetInfo.index_flag;
+                        for(int jj = 0; jj < 3; jj++)
+                        {
+                            // sensor i detect a magnet
+                            if(tmp_ind[jj] == 1)
+                            {
+
+                                int after_ind = 10;
+                                // double amp_x_ddtw[30];
+                                // double amp_y_ddtw[30];
+                                // double amp_z_ddtw[30];
+                                
+                                for(int kk = 0; kk < 20; kk++)
+                                {
+                                    // amp_x_ddtw[kk] = 
+                                    // amp_y_ddtw[kk] = smooth_sensors[jj].data[tmp_cnt-after_ind + kk].y;
+                                    // amp_z_ddtw[kk] = smooth_sensors[jj].data[tmp_cnt-after_ind + kk].z;
+                                    amp_tol_ddtw[kk][0] = smooth_sensors[jj].data[tmp_cnt-after_ind + kk].x;
+                                    amp_tol_ddtw[kk][1] = smooth_sensors[jj].data[tmp_cnt-after_ind + kk].y;
+                                    amp_tol_ddtw[kk][2] = smooth_sensors[jj].data[tmp_cnt-after_ind + kk].z;
+                                }
+                                int ang_gran = 8;
+                                int dis_gran = 1;
+                                int test_points = 20;
+                                int gt_points = 20;
+                                int axis = 3;
+                                double angle = 0;
+                                double start_time = clock();
+                                angle = DDTW_matching_res(amp_tol_ddtw, ang_gran, dis_gran, test_points, gt_points, axis);
+                                printf("Estimated angle is: %lf", angle);
+                                double end_time = clock();
+                                printf("DDTW time: %lf", (end_time - start_time) / CLOCKS_PER_SEC);
+
+                            }
+                        }
+                        double amp1_localize_x = magnetInfo.tmp_data[0].x;
+                        double amp1_localize_y = magnetInfo.tmp_data[0].y;
+                        double amp1_localize_z = magnetInfo.tmp_data[0].z;
+                        double amp1_localize[3] = {amp1_localize_x, amp1_localize_y, amp1_localize_z};
+
+                        double amp3_localize_x = magnetInfo.tmp_data[2].x;
+                        double amp3_localize_y = magnetInfo.tmp_data[2].y;
+                        double amp3_localize_z = magnetInfo.tmp_data[2].z;
+                        double amp3_localize[3] = {amp3_localize_x, amp3_localize_y, amp3_localize_z};
+                        double sol[1] = {0};
+                        double start_time = clock();
+                        ComputeD(amp1_localize, amp3_localize, 0, 1, 3, 10, 8, sol);
+                        double end_time = clock();
+                        printf("Localize time: %lf", (end_time - start_time) / CLOCKS_PER_SEC);
+                        printf("Localize result: %lf", sol[0]);
+                        // freeMagnetInfo(magnetInfo);
+                        // initMagnetInfo(magnetInfo, 5);
+                    }
+
                 }
-
+                cnt ++;
             }
-            cnt ++;
         }
+    }
+}
 
-
-void app_main(void)
+int main(void)
 {   
    
     for (int i = 0; i < WND; i++) 
@@ -1323,5 +1346,7 @@ void app_main(void)
         amp_tmp_list[i].x = amp_tmp_list[i].y = amp_tmp_list[i].z = amp_tmp_list[i].total = 0;
     }
 
-    
+    // run the main loop
+    detect_mag();
+    return 1;
 }

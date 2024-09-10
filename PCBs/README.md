@@ -55,7 +55,7 @@ Below is a list of the components used in designing and manufacturing our protot
 ## PCB design tool and library
 We utilize [EasyEDA](https://easyeda.com/) to design PCB boards.
 The component library of capacitive and resistance relies on the standard library.
-The footprints for these components can be found in the [EasyEDA 3D model librariy](https://docs.easyeda.com/en/PCB/3D-Model-Manager/index.html).
+The footprints for these components can be found in the [EasyEDA 3D model library](https://docs.easyeda.com/en/PCB/3D-Model-Manager/index.html).
 The footprint of the MLX90393 magnetometer we used, can see [here](https://www.snapeda.com/parts/MLX90393SLW-ABA-011-RE/Melexis%20Technologies/view-part/551380/?ref=search&t=MLX90393).
 
 After the PCB is manufactured, we also provide an interactive HTML BOM file to facilitate the quick installation of components. 

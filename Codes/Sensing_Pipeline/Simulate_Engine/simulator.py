@@ -1,12 +1,10 @@
-import numpy as np
 import magpylib as magpy
+import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
 import math
 import pandas as pd
-import pickle
 from sklearn import preprocessing
-import sys
 from decimal import Decimal, ROUND_HALF_UP
 
 
@@ -46,7 +44,7 @@ class Simulator:
             { "the sensor's name": [the sensor's reading] }
         """
         rotation_vector = np.array((math.cos(deg / 180 * math.pi), math.sin(deg / 180 * math.pi),
-                                    0))  # 存在误差，如sensor从4Ntag中间竖直穿过时x轴会有异常读数，不过加噪后应该可以忽略
+                                    0))
         rotation_object = R.from_euler('z', deg - 90, degrees=True)
         for sensor in self.sensors.values():
             sensor.rotate(rotation_object, anchor=(0, 0, 0))
@@ -75,75 +73,6 @@ class Simulator:
         return res, self.sensors
 
 
-def draw2Dfigure_single(x_data, title, label, color='blue', fs=20):  # copied from simulation.py
-    plt.figure(figsize=[10, 8])
-    x = [i for i in range(1, len(x_data) + 1)]
-    plt.plot(x, x_data, color=color, label=label, linewidth=2.5)
-    plt.tick_params(labelsize=20)
-    plt.legend(fontsize=20)
-    plt.xlabel('Sample', fontsize=fs)
-    plt.ylabel('Sensor reading (uT)', fontsize=fs)
-    # plt.title(title, fontsize=fs)
-    plt.tight_layout()
-    plt.show()
-    return
-
-
-def draw2Dfigure_xyz(x_data, y_data, z_data, fs=20):  # copied from simulation.py
-    plt.figure(figsize=[12, 8])
-    x = [i for i in range(1, len(x_data) + 1)]
-    plt.plot(x, x_data, color='red', label='x-axis data', linewidth=3)
-    plt.plot(x, y_data, color='blue', label='y-axis data', linewidth=3)
-    plt.plot(x, z_data, color='green', label='z-axis data', linewidth=3)
-    plt.tick_params(labelsize=fs)
-    plt.legend(fontsize=fs)
-    plt.xlabel('Sample', fontsize=fs)
-    plt.ylabel('Sensor reading (uT)', fontsize=fs)
-    plt.tight_layout()
-    plt.show()
-    return
-
-
-def draw2Dfigure_subplot(x_1, y_1, z_1, x_2, y_2, z_2, x_3, y_3, z_3, fs=20):  # copied from simulation.py
-    # plt.figure(figsize=[10, 8])
-    plt.subplot(3, 1, 1)
-    x = [i for i in range(1, len(x_1) + 1)]
-    plt.plot(x, x_1, color='red', label='x-axis data', linewidth=3)
-    plt.plot(x, y_1, color='blue', label='y-axis data', linewidth=3)
-    plt.plot(x, z_1, color='green', label='z-axis data', linewidth=3)
-    plt.tick_params(labelsize=fs)
-    plt.legend(fontsize=fs)
-    plt.xlabel('Sample', fontsize=fs)
-    plt.ylabel('Sensor reading (uT)', fontsize=fs)
-    # plt.tight_layout()
-    # plt.show()
-
-    plt.subplot(3, 1, 2)
-    x = [i for i in range(1, len(x_2) + 1)]
-    plt.plot(x, x_2, color='red', label='x-axis data', linewidth=3)
-    plt.plot(x, y_2, color='blue', label='y-axis data', linewidth=3)
-    plt.plot(x, z_2, color='green', label='z-axis data', linewidth=3)
-    plt.tick_params(labelsize=fs)
-    # plt.legend(fontsize=fs)
-    plt.xlabel('Sample', fontsize=fs)
-    plt.ylabel('Sensor reading (uT)', fontsize=fs)
-    # plt.tight_layout()
-    # plt.show()
-
-    plt.subplot(3, 1, 3)
-    x = [i for i in range(1, len(x_3) + 1)]
-    plt.plot(x, x_3, color='red', label='x-axis data', linewidth=3)
-    plt.plot(x, y_3, color='blue', label='y-axis data', linewidth=3)
-    plt.plot(x, z_3, color='green', label='z-axis data', linewidth=3)
-    plt.tick_params(labelsize=fs)
-    # plt.legend(fontsize=fs)
-    plt.xlabel('Sample', fontsize=fs)
-    plt.ylabel('Sensor reading (uT)', fontsize=fs)
-    # plt.tight_layout()
-    plt.show()
-
-    return
-
 def draw2Dfigure(x_data, y_data, z_data, all_data, angle, offset, fs=25):  # copied from simulation.py
     plt.figure(figsize=[12, 8])
     x = [i for i in range(1, len(x_data) + 1)]
@@ -164,7 +93,6 @@ def draw2Dfigure(x_data, y_data, z_data, all_data, angle, offset, fs=25):  # cop
     return
 
 
-
 def simulation_process(rotation_angle, lateral_offset = 0, deg = 90):
     magpy.defaults.display.style.magnet.update(
     magnetization_show=True,
@@ -174,10 +102,7 @@ def simulation_process(rotation_angle, lateral_offset = 0, deg = 90):
     simulator = Simulator()
 
     # Magnet configuration
-    # src = magpy.magnet.Cuboid(magnetization=(0,  10000000, 0), dimension=[3, 3, 3], position=(0, 0, 0))
     src = magpy.magnet.Cylinder(magnetization=(0, 2000000, 0), dimension=(2, 1), position=(0, 0, 0))
-    # src = magpy.magnet.Sphere(magnetization=(0, 10000000, 0), diameter=15, position=(0, 0, 0))
-
 
     sens = magpy.Sensor(pixel=[(0, 0, 0)], position=(lateral_offset, 0, 15), orientation=R.from_euler('x', 180, degrees=True))
 
@@ -230,6 +155,7 @@ def simulation_process(rotation_angle, lateral_offset = 0, deg = 90):
             z_num = Decimal(B_z[i])
             B_z[i] = float(z_num.quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP))
 
+        
         for i in range(len(B_x)):
             if(abs(B_x[i]) < 1):
                 B_x[i] = 0
@@ -244,29 +170,17 @@ def simulation_process(rotation_angle, lateral_offset = 0, deg = 90):
         all_x_data.append(B_x)
         all_y_data.append(B_y)
         all_z_data.append(B_z)
-        # add gauss noise to the data
-        # B_x = np.array(B_x) + np.random.normal(0, 5, len(B_x))
-        # B_y = np.array(B_y) + np.random.normal(0, 5, len(B_y))
-        # B_z = np.array(B_z) + np.random.normal(0, 5, len(B_z))
 
 
 
-
-        # draw the sum of the three axis
         
         for i in range(len(B_x)):
             # total_B.append(math.sqrt(B_x[i]**2 + B_y[i]**2 + B_z[i]**2))
             total_B.append([B_x[i], B_y[i], B_z[i]])
-        # draw2Dfigure_single(total_B, "Vector sum", 'vector sum', color='black')
 
-        # draw2Dfigure_single(B_x, "X-axis data of %s" % sen_name, 'x-axis data', color="red")
-        # draw2Dfigure_single(B_y, "Y-axis data of %s" % sen_name, 'y-axis data', color='blue')
-        # draw2Dfigure_single(B_z, "Z-axis data of %s" % sen_name, 'z-axis data', color='green')
-        
         # draw2Dfigure(B_x, B_y, B_z, total_B, angle=rotation_angle, offset=lateral_offset)     
      
     return B_x, B_y, B_z, total_B
-
 
 
 def xyz_sensor(file_name, sensor_num, flag=0):
@@ -277,15 +191,6 @@ def xyz_sensor(file_name, sensor_num, flag=0):
     for i in range(len(df)):
         document = df[i:i+1]
         sensor = list(map(float, document[sensor_num][i][1:-1].split(', ')))
-        '''
-        sensor2 = list(map(float, document['Sensor 2'][i][1:-1].split(', ')))
-        sensor3 = list(map(float, document['Sensor 3'][i][1:-1].split(', ')))
-        sensor4 = list(map(float, document['Sensor 4'][i][1:-1].split(', ')))
-        sensor5 = list(map(float, document['Sensor 5'][i][1:-1].split(', ')))
-        sensor6 = list(map(float, document['Sensor 6'][i][1:-1].split(', ')))
-        sensor7 = list(map(float, document['Sensor 7'][i][1:-1].split(', ')))
-        sensor8 = list(map(float, document['Sensor 8'][i][1:-1].split(', ')))
-        '''
         sensor_x.append(sensor[0])
         sensor_y.append(sensor[1])
         sensor_z.append(sensor[2])
@@ -299,17 +204,16 @@ def xyz_sensor(file_name, sensor_num, flag=0):
 
 if __name__ == "__main__":
     gt_datas = []
-    for i in range(0, 18):
-        for j in range(-2, 3):
-            Bx, By, Bz, Tb = simulation_process(rotation_angle=-i*20, lateral_offset=j*5)
-            gt_datas.append(Tb[70:230:2])
+    # Simulate parameters
+    angular_granularity = 20
+    lateral_granularity = 5
+    for i in range(0, 360, angular_granularity):
+        for j in range(-lateral_granularity//2, lateral_granularity//2+1):
+            Bx, By, Bz, Tb = simulation_process(rotation_angle=-i*angular_granularity, lateral_offset=j*lateral_granularity)
+            gt_datas.append(Tb)
 
-    # 将列表保存到文件中
-    # with open('template_8_1.pkl', 'wb') as f:
-    #     pickle.dump(gt_datas, f)
-
-
-    with open("template_18_5_80.txt", "w") as file:
+    # Save the simulated data to a txt file
+    with open("template_" + str(angular_granularity) + "_" + "lateral_granularity" + ".txt", "w") as file:
         for layer in gt_datas:
             for row in layer:
                 file.write(" ".join(map(str, row)) + "\n")

@@ -5,17 +5,13 @@ import serial
 import struct
 import math
 from Rosmaster_Lib import Rosmaster
-import pickle
-import sys
-import numpy as np
 import ctypes
 import matplotlib
 import tkinter
-from reconstruct_tag import find_vertex_points, calculate_rotation_angle
 matplotlib.use('TkAgg')
 # from localize import ComputeD
-import matplotlib.pyplot as plt
 
+import matplotlib.pyplot as plt
 
 def gaussian(x, pos, wid):
     g = np.exp(-((x - pos) / (0.60056120439323 * wid)) ** 2)
@@ -23,17 +19,17 @@ def gaussian(x, pos, wid):
 
 
 # ------------Experiment Settings-------------
-# Embedded C functions for reducing the computation/detection time of Polaris
-# Load the ddtw matching shared library
-ddtw_c = ctypes.CDLL('./ddtw.so')
-# define the C function's parameter types
+# 加载共享库
+ddtw_c = ctypes.CDLL('./DDTW.so')
+
+# 定义C函数的参数类型
 ddtw_function = ddtw_c.DDTW_matching_res
 ddtw_function.argtypes = [ctypes.POINTER(ctypes.c_double * 3), ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int]
 ddtw_function.restype = ctypes.c_double
 
-# Load the localize shared library
+# 加载共享库
 localize_c = ctypes.CDLL('./localize.so')
-# define the C function's parameter types
+# 定义C函数的参数类型
 localize_function = localize_c.ComputeD
 localize_function.argtypes = [ctypes.c_double * 3, ctypes.c_double * 3, ctypes.c_double, ctypes.c_int, ctypes.c_int, ctypes.c_double, ctypes.c_double, ctypes.c_double * 1]
 localize_function.restype = ctypes.c_double
@@ -44,7 +40,6 @@ num = 9
 # experiment times
 times = 1
 # COM port for connecting sensor array, jetson nano
-# Replace with the corresponding COM port on your robot
 COM = "/dev/rplidar"
 # Windows port
 # COM = "COM12"
@@ -59,8 +54,10 @@ gt_datas = []
 # May need to finetune to optimize results if used different sensors
 wnd = 3 # Gaussian Smoother for the raw signal data
 wnd_d = 1  # Gaussian Smoother for the 1st derivative data
-delta_thrd_tol =[120 for i in range(num)]  # Threshold for detecting the peak
-delta_thrd_tol =[30 for i in range(num)]  # Threshold for detecting the peak 
+
+delta_thrd_tol =[120, 120, 120, 120, 120, 120, 120, 120, 120] 
+delta_thrd_tol =[30, 30, 30, 30, 30, 30, 30, 30, 30] 
+delta_thrd_tol =[30, 33, 33, 34, 35, 33, 33, 35, 41] 
 amp_thrd_tol = [1.05] * num
 start_raw_amp_x = [0] * num
 start_raw_amp_y = [0] * num
@@ -439,7 +436,7 @@ def detectMag():
                             # (tag_info[7][1]-tag_info[0][1])/f*v]    
             
                 print(x_axis, y_axis)
-                y_axis = [0, 40, 40, 80, 80]
+                # y_axis = [0, 40, 40, 80, 80]
 
                 # x, y axis to (x, y) points
                 # points = np.array([x, y]).T
@@ -480,6 +477,10 @@ def detectMag():
                 
                 if stop_flag:
                     print("Stop")
+                    test = pd.DataFrame(columns=raw_name, data=raw_result)
+                    # Raw data
+                    test.to_csv("RawData_" + scenario + "_" + str(times) + ".csv")
+
                     car.set_car_motion(0, 0, 0)
                     break
                 # car.set_car_motion(0, 0, 0)
@@ -539,6 +540,114 @@ def detectMag():
         car.set_car_motion(0, 0, 0)
         print("Exited")
 
+
+# def diff_dist(a,b):
+#     '''
+#     Computing drivative differences between a and b of dimension 3
+#     Arguments:
+#         a -- dx from signal 1, numpy array of shape ( 3,  )
+#         b -- dy from signal 2, numpy array of shape ( 3,  )
+#     Result:
+#           -- difference of estimated derivatives of x, y
+#     '''
+#     da_x = ((a[1][0] - a[0][0]) + (a[2][0]-a[0][0])/2)/2
+#     da_y = ((a[1][1] - a[0][1]) + (a[2][1]-a[0][1])/2)/2
+#     da_z = ((a[1][2] - a[0][2]) + (a[2][2]-a[0][2])/2)/2
+#     db_x = ((b[1][0] - b[0][0]) + (b[2][0]-b[0][0])/2)/2
+#     db_y = ((b[1][1] - b[0][1]) + (b[2][1]-b[0][1])/2)/2
+#     db_z = ((b[1][2] - b[0][2]) + (b[2][2]-b[0][2])/2)/2
+
+#     return math.sqrt((da_x-db_x)**2 + (da_y - db_y)**2 + (da_z - db_z)**2)
+
+
+# def DDTW(signal_1, signal_2):
+#     '''
+#     Arguments:
+#         signal_1 -- first time series, numpy array of shape ( n1, 3 )
+#         signal_2 -- second time series, numpy array of shape ( n2, 3 )
+#     Results:
+#         ddtw -- distance matrix, numpy array of shape ( n1 - 2, n2 - 2 )
+#         ddtw_traceback -- traceback matrix, numpy array of shape ( n1 - 2, n2 - 2 )
+#     ''' 
+#     assert signal_1.shape[0] != 0 and signal_2.shape[0] != 0, '''Input signals must be a column vectors,
+#                                                                 Please check the input signal dimension.'''
+#     assert signal_1.shape[0] >= 3 and signal_2.shape[0] >= 3, '''The length of your signal should be 
+#                                                                  greater than 3 to implement DDTW.'''
+#     n_rows = signal_1.shape[0]-2
+#     n_cols = signal_2.shape[0]-2
+
+#     ddtw = np.zeros((n_rows,n_cols))
+    
+#     ddtw_traceback = np.zeros((n_rows,n_cols))
+
+#     ddtw[0,0] = diff_dist(signal_1[0:3], signal_2[0:3])
+
+
+#     for i in range(1, n_rows):
+#         ddtw[i,0] = ddtw[i-1,0] + diff_dist(signal_1[i-1:i+2], signal_2[0:3])
+#         ddtw_traceback[i,0] = 1
+#     for j in range(1, n_cols):
+#         ddtw[0,j] = ddtw[0,j-1] + diff_dist(signal_1[0:3], signal_2[j-1:j+2])
+#         ddtw_traceback[0,j] = 2
+#     for i in range(1, n_rows):
+#         for j in range(1, n_cols):
+#             temp = np.array([ddtw[i-1,j-1], ddtw[i-1,j], ddtw[i,j-1]])
+#             best_idx = np.argmin(temp)
+#             ddtw[i,j] = diff_dist(signal_1[i-1:i+2], signal_2[j-1:j+2]) + temp[best_idx]
+#             ddtw_traceback[i,j] = best_idx
+#             # print(ddtw[i, j])
+#     return ddtw, ddtw_traceback
+
+
+# def get_traceback(ddtw,ddtw_traceback):
+#     i, j = ddtw.shape
+#     i -= 1
+#     j -= 1
+#     x = [i]
+#     y = [j]
+#     while (i != 0 or j != 0):
+#         if i != 0 and j != 0:
+#             idx_i = [i-1, i-1, i]
+#             idx_j = [j-1 ,j, j-1]
+#             idx = int(ddtw_traceback[i,j])
+#             i = idx_i[idx]
+#             j = idx_j[idx]
+#         elif i == 0 and j != 0:
+#             j = j-1
+#         elif i != 0 and j == 0:
+#             i = i-1
+#         elif i==1 and j == 1:
+#             i = 0
+#             j = 0
+#         x.append(i)
+#         y.append(j)
+#     # print(x, y)
+#     dis = 0
+#     for i in range(len(x)):
+#         dis +=  ddtw[x[i], y[i]]
+#     dis /= len(x)
+#     # plt.plot(x, y)
+#     # plt.show()
+#     return dis
+
+
+# def DDTW_matching_res(amp_list, gt_datas, lat_dis, deg):
+#     angle = 0
+#     fin = sys.maxsize
+#     for i in range(len(gt_datas)):
+#         gt, test = np.array(gt_datas[i]), np.array(amp_list)
+#         if i != 0 and i % lat_dis == 0:
+#             angle += deg
+#         res, res_2 = DDTW(gt, test)
+#         dis = get_traceback(res, res_2)
+#         if dis < fin:
+#             fin = dis
+#             fin_angle = angle
+#             fin_off = i % lat_dis
+#     return fin_angle, fin_off
+
+
+import numpy as np
 
 def encode_phase(N):
     # Calculate the number of bits per phase based on N
