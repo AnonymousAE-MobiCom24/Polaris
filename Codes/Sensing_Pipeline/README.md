@@ -26,6 +26,6 @@ The generated templates are used for the magnet polarity orientation matching al
 For details, please refer to Sec. 6.2.2.
 
 ## Note
-This directory contains the sensing pipeline for real-time detection, which requires a hardware, i.e., the sensor array.
+This directory contains the sensing pipeline for real-time detection, which requires hardwares, e.g., the sensor array and a robot car.
 For a quick start with our Polaris system, we’ve provided an offline version of the sensing algorithm framework. 
 For more information, please refer to the related [README](../../Evaluation/README.md) file.
