@@ -933,6 +933,8 @@ double amp_tol = 0.0;
 double amp_tol_ddtw[20][3];
 struct MagnetInfo magnetInfo;
 
+#define COM_PORT _T("\\\\.\\COM6")  // Replace with your actual COM port
+
 int detect_mag(){
 
     HANDLE hSerial = CreateFile(COM_PORT, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
