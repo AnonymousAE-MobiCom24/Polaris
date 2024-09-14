@@ -6,6 +6,7 @@ Adafruit_MLX90393 sensor[num];
 
 // CS pins 
 int CS[num] = {2, 3, 4, 5, 7, 9, 10, 11, 15};
+//int CS[num] = {2, 3, 4};
 float data_array[num*3];
 
 void setup()

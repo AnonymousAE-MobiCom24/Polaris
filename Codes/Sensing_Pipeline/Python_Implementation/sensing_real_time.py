@@ -7,7 +7,6 @@ import math
 from Rosmaster_Lib import Rosmaster
 import ctypes
 import matplotlib
-import tkinter
 matplotlib.use('TkAgg')
 # from localize import ComputeD
 
@@ -20,25 +19,25 @@ def gaussian(x, pos, wid):
 
 # ------------Experiment Settings-------------
 # 加载共享库
-ddtw_c = ctypes.CDLL('./DDTW.so')
-
+# ddtw_c = ctypes.CDLL('./DDTW.so')
+ddtw_c = ctypes.CDLL('./Utils/ddtw.so')
 # 定义C函数的参数类型
 ddtw_function = ddtw_c.DDTW_matching_res
 ddtw_function.argtypes = [ctypes.POINTER(ctypes.c_double * 3), ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int]
 ddtw_function.restype = ctypes.c_double
 
 # 加载共享库
-localize_c = ctypes.CDLL('./localize.so')
+localize_c = ctypes.CDLL('./Utils/localize.so')
 # 定义C函数的参数类型
 localize_function = localize_c.ComputeD
 localize_function.argtypes = [ctypes.c_double * 3, ctypes.c_double * 3, ctypes.c_double, ctypes.c_int, ctypes.c_int, ctypes.c_double, ctypes.c_double, ctypes.c_double * 1]
 localize_function.restype = ctypes.c_double
 
-scenario = "Detecting_Polaris_"
+scenario = "Detecting_Polaris_v1"
 # Number of sensors
 num = 9
 # experiment times
-times = 1
+times = 15
 # COM port for connecting sensor array, jetson nano
 COM = "/dev/rplidar"
 # Windows port
@@ -55,16 +54,14 @@ gt_datas = []
 wnd = 3 # Gaussian Smoother for the raw signal data
 wnd_d = 1  # Gaussian Smoother for the 1st derivative data
 
-delta_thrd_tol =[120, 120, 120, 120, 120, 120, 120, 120, 120] 
-delta_thrd_tol =[30, 30, 30, 30, 30, 30, 30, 30, 30] 
-delta_thrd_tol =[30, 33, 33, 34, 35, 33, 33, 35, 41] 
+delta_thrd_tol =[30, 31, 30, 30, 31, 31, 30, 31, 35] 
 amp_thrd_tol = [1.05] * num
 start_raw_amp_x = [0] * num
 start_raw_amp_y = [0] * num
 start_raw_amp_z = [0] * num
 
 # tag and sensor layout
-theta, h, l = 0, 15, 20
+h, l = 15, 20
 
 # Constants and Globals
 raw_result = []
@@ -131,7 +128,7 @@ def detectMag():
     global x, sx, dx, sdx, y, sy, dy, sdy, sig_tol, s_sig_tol, ds_sig_tol, sd_sig_tol
     global slope_thrd_tol, slope_list_tol, estimate_tol, raw_result, raw_list_tol
     global delta_t, offset_list, fin_angle, fin_dis, magnet_info,cur_n, flag_s, gt_datas
-    global theta, h, l, tag_info, flag_update
+    global h, l, tag_info, flag_update
     global LastRAW_tol, LastRAW_x, LastRAW_y, LastRAW_z, last_index, car_flag
     try:
         while True:
@@ -331,9 +328,9 @@ def detectMag():
                     start_time = datetime.datetime.now()
                     res = ddtw_function(c_array, ang_gran, dis_gran, test_points, gt_points, axis)
                     fin_angle[i] = res
-                    print("DDTW angle: ", res)
+                    # print("DDTW angle: ", res)
                     end_time = datetime.datetime.now()
-                    print("DDTW time: ", (end_time - start_time).microseconds/1000)
+                    # print("DDTW time: ", (end_time - start_time).microseconds/1000)
                     # continue
                     # fin_angle[i], fin_dis[i] = DDTW_matching_res(amp_list, gt_datas, lat_dis=5, deg=10)
                     
@@ -360,7 +357,7 @@ def detectMag():
                         amp2_tmp = [amp2_tmp_x, amp2_tmp_y, amp2_tmp_z] 
                     else:
                         if abs((s_sig_tol[tmp_index - 1][tmp_n])) > \
-                        abs((s_sig_tol[tmp_index + 1][tmp_n])):
+                        abs((s_sig_tol[tmp_index + 1][tmp_n] - 15)):
                             tmp_sec_index = tmp_index - 1
                             amp2_tmp_x = (sx[tmp_sec_index][tmp_n]) - LastRAW_x[tmp_sec_index]
                             amp2_tmp_y = (sy[tmp_sec_index][tmp_n]) - LastRAW_y[tmp_sec_index]
@@ -372,10 +369,6 @@ def detectMag():
                             amp2_tmp_y = (sy[tmp_sec_index][tmp_n]) - LastRAW_y[tmp_sec_index]
                             amp2_tmp_z = (sz[tmp_sec_index][tmp_n]) - LastRAW_z[tmp_sec_index]
                             amp2_tmp = [amp2_tmp_x, amp2_tmp_y, amp2_tmp_z]
-                    
-                    # print("amp1_tmp: ", amp1_tmp)
-                    # print("amp2_tmp: ", amp2_tmp)
-                    # offset_d, offset_d_s1 = ComputeD(amp1_tmp, amp2_tmp, theta, tmp_index, tmp_sec_index, h, l)
                     
                     double_array = (ctypes.c_double * 3)(*amp1_tmp)
 
@@ -402,7 +395,7 @@ def detectMag():
                             flag_tag = False
                             ind_tag = 0
                             for tag_i in range(len(tag_info)):
-                                if abs(tag_info[tag_i][1]- info[1]) < 6 and abs(tag_info[tag_i][3] - info[3]) < 6: 
+                                if abs(tag_info[tag_i][1]- info[1]) < 4 and abs(tag_info[tag_i][3] - info[3]) < 4: 
                                     # if(tag_info[tag_i][2] - info[2] > 10):
                                     flag_tag = True
                                     ind_tag = tag_i
@@ -419,84 +412,46 @@ def detectMag():
                 
                 
             # reconstructing the tag layout
-            if(len(tag_info) == 5):
-                # print(tag_info)
-                # reconstruct the tag layout
-                # speed: mm
-                v = 100
-                f = 50
-                x_axis = [160-tag_info[0][3], 160-tag_info[1][3], 160-tag_info[2][3], 
-                          160-tag_info[3][3], 160-tag_info[4][3]]
-                        #   160-tag_info[5][3], 160-tag_info[6][3], 160-tag_info[7][3]]
-                # x_axis = [v*(tag_info[1][3] - tag_info[0][3])/f]
-                # y_axis = [tag_info[0][1], tag_info[1][1], tag_info[2][1]]
-                y_axis = [0, (tag_info[1][1]-tag_info[0][1])/f*v, (tag_info[2][1]-tag_info[0][1])/f*v,
-                          (tag_info[3][1]-tag_info[0][1])/f*v, (tag_info[4][1]-tag_info[0][1])/f*v]
-                            # (tag_info[5][1]-tag_info[0][1])/f*v, (tag_info[6][1]-tag_info[0][1])/f*v,
-                            # (tag_info[7][1]-tag_info[0][1])/f*v]    
-            
-                print(x_axis, y_axis)
-                # y_axis = [0, 40, 40, 80, 80]
+            if(len(tag_info) >= 3 and len(tag_info) == 5):
+                v = 105
+                x_axis, y_axis, points = [], [], []
+                for i in range(len(tag_info)):
+                    x_axis.append(160-tag_info[i][3])
+                    y_axis.append((tag_info[i][1]-tag_info[0][1])/40*v)
+                    points.append([x_axis[i], y_axis[i]])
 
-                # x, y axis to (x, y) points
-                # points = np.array([x, y]).T
-                points = [[x_axis[0], y_axis[0]], [x_axis[1], y_axis[1]], [x_axis[2], y_axis[2]],
-                          [x_axis[3], y_axis[3]], [x_axis[4], y_axis[4]]]
-                    # [x_axis[5], y_axis[5]],
-                        #   [x_axis[6], y_axis[6]], [x_axis[7], y_axis[7]]]
                 points = np.array(points)
                 p1, p2, can = find_vertex_points(points)
-                measured_tri = np.array([can, p1, p2])
-                triangle_reference = np.array([[0, 80], [0, 0], [80, 80]])
-                # heading_angle = np.arccos((x_axis[1] - x_axis[0]) / 40) * 180 / np.pi
-                # print("heading_angle: ", heading_angle)
-                rotation_angle = calculate_rotation_angle(triangle_reference, measured_tri)
-                print("rotation angle:", rotation_angle)
-                # orientation = np.arctan((y_axis[1] - y_axis[0]) / (x_axis[1] - x_axis[0])) * 180 / np.pi
-                orientation = rotation_angle
-                # decode the tag's polarity
-                # if (orientation < 0):
-                    # orientation = (orientation + 360)%360
-                orient_list = [tag_info[0][2] + orientation, tag_info[1][2] + orientation, tag_info[2][2] + orientation,
-                               tag_info[3][2] + orientation, tag_info[4][2] + orientation]
-                                #  tag_info[5][2] + orientation,
-                            #    tag_info[6][2] + orientation, tag_info[7][2] + orientation]
-
-                phase_num = 8               # phase_to_code_map = encode_phase(phase_num)
-                decode_info= []
-                for phase in orient_list:
-                        decoded_code = decode_phase(phase, phase_num)
-                        decode_info.append(decoded_code)
-                        phase = (phase) % 360
-                        print(f"Phase {phase}° decodes to {decoded_code}")
-
-                stop_flag = True
-                for i in range(1):
-                    if decode_info[i] != "100":
-                        stop_flag = False
+                # print(x_axis, y_axis)
                 
-                if stop_flag:
-                    print("Stop")
-                    test = pd.DataFrame(columns=raw_name, data=raw_result)
-                    # Raw data
-                    test.to_csv("RawData_" + scenario + "_" + str(times) + ".csv")
+                orient_list = []
+                if(can is not None):
+                    measured_tri = np.array([can, p1, p2])
+                    triangle_reference = np.array([[0, 80], [0, 0], [80, 80]])
+                    rotation_angle = calculate_rotation_angle(triangle_reference, measured_tri)
+                    orientation = rotation_angle
+                    for i in range(len(tag_info)):
+                        orient_list.append(tag_info[i][2] + orientation)
+                    #
 
-                    car.set_car_motion(0, 0, 0)
-                    break
-                # car.set_car_motion(0, 0, 0)
-                last_index = tag_info[-1][1]
-                tag_info = []
+                    print("Estimated heading angle: " + str(rotation_angle) + " deg")
+                    localization_err, decode_info = decode_tag(points, orient_list)
+                    print("The localization error is: " + str(localization_err) + " mm")
+                    print("The decoded bits are:", decode_info)
+                    tag_id = int(''.join(decode_info), 2)
+                    print("The corresponding tag id is:", tag_id)
 
+                    # concatenate the decoded bits
+                    bits = ''.join(decode_info)
+                    # check the bits with ground truth with a maximal hamming distance of 3
+                    if within_hamming_distance(bits, '111111111111111111'):
+                        print("Stop")
+                        car.set_car_motion(0, 0, 0)
 
-           
-
-            # tag layout and orientation reconstruction
-                    
-
-    
+                    last_index = tag_info[-1][1]
+                    tag_info = []
             n = n + 1
             cnt += 1
-
     except KeyboardInterrupt:
         # Record the data
         print("Output csv")
@@ -541,125 +496,172 @@ def detectMag():
         print("Exited")
 
 
-# def diff_dist(a,b):
-#     '''
-#     Computing drivative differences between a and b of dimension 3
-#     Arguments:
-#         a -- dx from signal 1, numpy array of shape ( 3,  )
-#         b -- dy from signal 2, numpy array of shape ( 3,  )
-#     Result:
-#           -- difference of estimated derivatives of x, y
-#     '''
-#     da_x = ((a[1][0] - a[0][0]) + (a[2][0]-a[0][0])/2)/2
-#     da_y = ((a[1][1] - a[0][1]) + (a[2][1]-a[0][1])/2)/2
-#     da_z = ((a[1][2] - a[0][2]) + (a[2][2]-a[0][2])/2)/2
-#     db_x = ((b[1][0] - b[0][0]) + (b[2][0]-b[0][0])/2)/2
-#     db_y = ((b[1][1] - b[0][1]) + (b[2][1]-b[0][1])/2)/2
-#     db_z = ((b[1][2] - b[0][2]) + (b[2][2]-b[0][2])/2)/2
 
-#     return math.sqrt((da_x-db_x)**2 + (da_y - db_y)**2 + (da_z - db_z)**2)
+def hamming_distance(code1, code2):
+    """
+    Calculates the Hamming distance between two binary codes.
+    """
+    if len(code1) != len(code2):
+        raise ValueError("The lengths of the codes must be the same.")
+
+    distance = 0
+    for bit1, bit2 in zip(code1, code2):
+        if bit1 != bit2:
+            distance += 1
+    return distance
+
+def within_hamming_distance(code1, code2, max_distance=3):
+    """
+    Checks if the Hamming distance between two binary codes is within a specified maximum distance.
+    """
+    distance = hamming_distance(code1, code2)
+    return distance <= max_distance
 
 
-# def DDTW(signal_1, signal_2):
-#     '''
-#     Arguments:
-#         signal_1 -- first time series, numpy array of shape ( n1, 3 )
-#         signal_2 -- second time series, numpy array of shape ( n2, 3 )
-#     Results:
-#         ddtw -- distance matrix, numpy array of shape ( n1 - 2, n2 - 2 )
-#         ddtw_traceback -- traceback matrix, numpy array of shape ( n1 - 2, n2 - 2 )
-#     ''' 
-#     assert signal_1.shape[0] != 0 and signal_2.shape[0] != 0, '''Input signals must be a column vectors,
-#                                                                 Please check the input signal dimension.'''
-#     assert signal_1.shape[0] >= 3 and signal_2.shape[0] >= 3, '''The length of your signal should be 
-#                                                                  greater than 3 to implement DDTW.'''
-#     n_rows = signal_1.shape[0]-2
-#     n_cols = signal_2.shape[0]-2
+def decode_tag(points, orient_list):
+    magnet_id = []
+    for x, y in points:
+        x = x - points[0][0]
+        if abs(x) <= 20 and abs(y) <= 20:
+            magnet_id.append(1)
+        elif 20 < abs(x) <= 60 and abs(y) <= 20:
+            magnet_id.append(2)
+        # elif 60 < abs(x) <= 100 and abs(y) <= 20:
+        #     magnet_id.append(3)
+        elif abs(x) <= 20 and 20 < abs(y) <= 40:
+            magnet_id.append(3)
+        elif 20 < abs(x) <= 60 and 20 < abs(y) <= 60:
+            magnet_id.append(4)
+        elif 60 < abs(x) <= 100 and 20 < abs(y) <= 60:
+            magnet_id.append(5)
+        elif abs(x) <= 20 and 60 < abs(y) <= 100:
+            magnet_id.append(6)
+        elif 20 < abs(x) <= 60 and 60 < abs(y) <= 100:
+            magnet_id.append(7)
+        elif 60 < abs(x) <= 100 and 60 < abs(y) <= 100:
+            magnet_id.append(8)
+ 
+    decode_mag = []
+    for i in range(len(orient_list)):
+        decode_mag.append((magnet_id[i], orient_list[i], points[i]))
+    # sort the decode_info by the magnet_id
+    decode_mag = sorted(decode_mag, key=lambda x: x[0])
 
-#     ddtw = np.zeros((n_rows,n_cols))
+    phase_num = 8               # phase_to_code_map = encode_phase(phase_num)
+    decode_info= []
+    for mag in decode_mag:
+            phase = mag[1]
+            decoded_code = decode_phase(phase, phase_num)
+            decode_info.append(decoded_code)
+            phase = (phase) % 360
+            # print(f"Phase {phase}° decodes to {decoded_code}")
+
+    decode_id = [id for id, _, _ in decode_mag]
     
-#     ddtw_traceback = np.zeros((n_rows,n_cols))
-
-#     ddtw[0,0] = diff_dist(signal_1[0:3], signal_2[0:3])
-
-
-#     for i in range(1, n_rows):
-#         ddtw[i,0] = ddtw[i-1,0] + diff_dist(signal_1[i-1:i+2], signal_2[0:3])
-#         ddtw_traceback[i,0] = 1
-#     for j in range(1, n_cols):
-#         ddtw[0,j] = ddtw[0,j-1] + diff_dist(signal_1[0:3], signal_2[j-1:j+2])
-#         ddtw_traceback[0,j] = 2
-#     for i in range(1, n_rows):
-#         for j in range(1, n_cols):
-#             temp = np.array([ddtw[i-1,j-1], ddtw[i-1,j], ddtw[i,j-1]])
-#             best_idx = np.argmin(temp)
-#             ddtw[i,j] = diff_dist(signal_1[i-1:i+2], signal_2[j-1:j+2]) + temp[best_idx]
-#             ddtw_traceback[i,j] = best_idx
-#             # print(ddtw[i, j])
-#     return ddtw, ddtw_traceback
-
-
-# def get_traceback(ddtw,ddtw_traceback):
-#     i, j = ddtw.shape
-#     i -= 1
-#     j -= 1
-#     x = [i]
-#     y = [j]
-#     while (i != 0 or j != 0):
-#         if i != 0 and j != 0:
-#             idx_i = [i-1, i-1, i]
-#             idx_j = [j-1 ,j, j-1]
-#             idx = int(ddtw_traceback[i,j])
-#             i = idx_i[idx]
-#             j = idx_j[idx]
-#         elif i == 0 and j != 0:
-#             j = j-1
-#         elif i != 0 and j == 0:
-#             i = i-1
-#         elif i==1 and j == 1:
-#             i = 0
-#             j = 0
-#         x.append(i)
-#         y.append(j)
-#     # print(x, y)
-#     dis = 0
-#     for i in range(len(x)):
-#         dis +=  ddtw[x[i], y[i]]
-#     dis /= len(x)
-#     # plt.plot(x, y)
-#     # plt.show()
-#     return dis
-
-
-# def DDTW_matching_res(amp_list, gt_datas, lat_dis, deg):
-#     angle = 0
-#     fin = sys.maxsize
-#     for i in range(len(gt_datas)):
-#         gt, test = np.array(gt_datas[i]), np.array(amp_list)
-#         if i != 0 and i % lat_dis == 0:
-#             angle += deg
-#         res, res_2 = DDTW(gt, test)
-#         dis = get_traceback(res, res_2)
-#         if dis < fin:
-#             fin = dis
-#             fin_angle = angle
-#             fin_off = i % lat_dis
-#     return fin_angle, fin_off
-
-
-import numpy as np
-
-def encode_phase(N):
-    # Calculate the number of bits per phase based on N
-    num_bits = int(np.log2(N))
+    decode_spatial = ""
+    if (decode_id == [1, 4, 5, 6, 8]):
+        decode_spatial = "111"
+    elif (decode_id == [1, 2, 3, 6, 8]):
+        decode_spatial = "000"
+    elif (decode_id == [1, 2, 4, 6, 8]):
+        decode_spatial = "001"
+    elif (decode_id == [1, 2, 5, 6, 8]):
+        decode_spatial = "010"
+    elif (decode_id == [1, 2, 6, 7, 8]):
+        decode_spatial = "011"
+    elif (decode_id == [1, 3, 4, 6, 8]):
+        decode_spatial = "100"
+    elif (decode_id == [1, 3, 5, 6, 8]):
+        decode_spatial = "101"
+    elif (decode_id == [1, 3, 6, 7, 8]):
+        decode_spatial ="110"
     
-    # Create a dictionary to map phase to binary code
-    phase_to_code = {
-        360 / N * i: format(i, f'0{num_bits}b') for i in range(N)
-    }
-    return phase_to_code
+    measured_points = []
+    gt_points = [[0, 0], [40, 40], [80, 40], [0, 80], [80, 80]]
+    for i in range(len(decode_mag)):
+        measured_x = decode_mag[i][2][0]-decode_mag[0][2][0]
+        measured_y = decode_mag[i][2][1]
+        measured_points.append([measured_x, measured_y])
+    measured_points = np.array(measured_points)
+    localization_err = calculate_distance(gt_points, measured_points)
+
+    decode_info.append(decode_spatial)
+
+    return localization_err, decode_info
+
+
+
+def calculate_distance(ground_truth, predicted):
+    distance = 0
+    for i in range(5):
+        distance += np.sqrt((ground_truth[i][0] - predicted[i][0]) ** 2 + (ground_truth[i][1] - predicted[i][1]) ** 2)
+    return distance/5
+
+# 计算两点之间的距离
+def distance(p1, p2):
+    return np.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+
+# 找到距离最远的两个点
+def find_vertex_points(points):
+    max_dist = 0
+    p1, p2 = points[0], points[1]
+    for i in range(len(points)):
+        for j in range(i+1, len(points)):
+            dist = distance(points[i], points[j])
+            if dist > max_dist:
+                max_dist = dist
+                p1, p2 = points[i], points[j]
+    candidates = find_third_vertex(points, p1, p2)
+
+    if candidates is None:
+        return p1, p2, None
+    else:
+        return list(p1), list(p2), list(candidates)
+
+def find_third_vertex(points, p1, p2):
+    candidate = None
+    for point in points:
+            if np.allclose(point, p1) or np.allclose(point, p2):
+                continue
+            angle = calculate_angle(p1, point, p2)
+            if np.isclose(angle, 90, atol=15):
+                candidate = point
+
+    return candidate
+    
+
+def calculate_angle(p1, p2, p3):
+    v1 = p2 - p1
+    v2 = p3 - p2
+    return np.arccos(np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))) * 180 / np.pi
+
+
+def calculate_rotation_angle(triangle1, triangle2):
+    center1 = np.mean(triangle1, axis=0)
+    center2 = np.mean(triangle2, axis=0)
+    triangle1_centered = triangle1 - center1
+    triangle2_centered = triangle2 - center2
+
+    vector1 = triangle1_centered[0] 
+    vector2 = triangle2_centered[0] 
+    
+    unit_vector1 = vector1 / np.linalg.norm(vector1)
+    unit_vector2 = vector2 / np.linalg.norm(vector2)
+    dot_product = np.dot(unit_vector1, unit_vector2)
+    angle = np.arccos(dot_product)
+    
+    cross_product = np.cross(unit_vector1, unit_vector2)
+    
+    if cross_product < 0:
+        angle = -angle
+    
+    angle_degrees = np.degrees(angle)
+    
+    return angle_degrees
+
 
 def decode_phase(phase, N):
+    # phase_to_code = encode_phase(N)
     # Define the phase boundaries
     decision_boundaries = [(360 / N * i + 360 / N / 2) % 360 for i in range(N)]
     
@@ -667,15 +669,26 @@ def decode_phase(phase, N):
     for boundary in decision_boundaries:
         if phase < boundary:
             index = decision_boundaries.index(boundary)
+            # print(index)
             break
     else:
         index = 0  # For the case where phase is beyond the last boundary
     
     # Calculate the number of bits per phase based on N
     num_bits = int(np.log2(N))
-     
-    # Convert the index to binary code
-    return format(index % N, f'0{num_bits}b')
+    # gray code
+    phase_to_code = {
+        0: '111',
+        1: '110',
+        2: '010',
+        3: '011',
+        4: '001',
+        5: '000',
+        6: '100',
+        7: '101'
+    }
+    return phase_to_code[index % N]
+
 
 
 if __name__ == '__main__':

@@ -11,7 +11,7 @@
 #include "time.h"
 
 
-#define BYTES_PER_LINE 36
+#define BYTES_PER_LINE 108
 
 #define WND 3
 #define WND_D 3
@@ -184,7 +184,7 @@ double get_traceback(int n1, int n2, double ddtw[][n2 - 2], int ddtw_traceback[]
 
 int load_template(int tem_length, int data_points, int axis_num, double data[][data_points][axis_num])
 {
-    FILE *file = fopen("template_36_5_80.txt", "r");
+    FILE *file = fopen("template_8_1.txt", "r");
     if(file ==NULL)
     {
        printf("No file!\n");
@@ -935,40 +935,8 @@ struct MagnetInfo magnetInfo;
 
 #define COM_PORT _T("\\\\.\\COM6")  // Replace with your actual COM port
 
-int detect_mag(){
+int detect_mag(handle_t hSerial){
 
-    HANDLE hSerial = CreateFile(COM_PORT, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-
-    if (hSerial == INVALID_HANDLE_VALUE)
-    {
-        // Handle error opening the serial port
-        _tprintf(_T("Error opening COM port\n"));
-        return 1;
-    }
-
-    DCB dcbSerialParams = { 0 };
-    dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
-
-    if (!GetCommState(hSerial, &dcbSerialParams))
-    {
-        // Handle error getting serial port state
-        _tprintf(_T("Error getting serial port state\n"));
-        CloseHandle(hSerial);
-        return 1;
-    }
-
-    dcbSerialParams.BaudRate = CBR_115200;  // Adjust baud rate as needed
-    dcbSerialParams.ByteSize = 8;
-    dcbSerialParams.StopBits = ONESTOPBIT;
-    dcbSerialParams.Parity = NOPARITY;
-
-    if (!SetCommState(hSerial, &dcbSerialParams))
-    {
-        // Handle error setting serial port state
-        _tprintf(_T("Error setting serial port state\n"));
-        CloseHandle(hSerial);
-        return 1;
-    }
 
     while (1)
     {
@@ -983,18 +951,18 @@ int detect_mag(){
             {
                 // Print the received byte
                   // Interpret the bytes as a float
-                float* floatValue = (float*)&buffer[i * sizeof(float)];
-                printf("Received Float: %f\n", *floatValue);
+                // float* floatValue = (float*)&buffer[i * sizeof(float)];
+                // printf("Received Float: %f\n", *floatValue);
     
                 float *x = (float*)&buffer[3 * i * sizeof(float)];
                 float *y = (float*)&buffer[3 * i * sizeof(float) + sizeof(float)];
                 float *z = (float*)&buffer[3 * i * sizeof(float) + 2 * sizeof(float)];
-                // printf("x: %f, y: %f, z: %f\n", *x, *y, *z); 
-                // double total = sqrt(pow(*x, 2) + pow(*y, 2) + pow(*z, 2));
+                printf("x: %f, y: %f, z: %f\n", *x, *y, *z); 
+                double total = sqrt(pow(*x, 2) + pow(*y, 2) + pow(*z, 2));
                 sensor_x_data[i] = *x;
                 sensor_y_data[i] = *y;
                 sensor_z_data[i] = *z;
-                // sensor_tol_data[i] = total;     
+                sensor_tol_data[i] = total;     
             }
 
 
@@ -1090,7 +1058,7 @@ int detect_mag(){
                     {
                         S_flag[i] = 0;
 
-                        if(slope_list[i].length == 10)
+                        if(slope_list[i].length == 20)
                         {
                             if(AuxiliaryFlag[i])
                             {
@@ -1115,7 +1083,7 @@ int detect_mag(){
                         // Positive peak
                         double smoothed_1 = smooth_derivative_sensors[i].data[smooth_derivative_sensors[i].size-1].total;
                         double smoothed_2 = smooth_derivative_sensors[i].data[smooth_derivative_sensors[i].size-2].total;
-                        if(smoothed_1 <= 0.0 && smoothed_2 >= 0.0)
+                        if(smoothed_1 < 0.0 && smoothed_2 > 0.0)
                         {
                             double slope = smoothed_1 - smoothed_2;
                             slope_list[i].length++;
@@ -1144,7 +1112,7 @@ int detect_mag(){
                                 //     printf("Sensor %d: x: %f, y: %f, z: %f\n", i + 1, smooth_sensors[i].data[raw_index].x, smooth_sensors[i].data[raw_index].y, smooth_sensors[i].data[raw_index].z);
 
                                 // }
-                                if(slope_list[i].length > 10)
+                                if(slope_list[i].length > 20)
                                 {
                                     if(raw >= delta_thrd[i])
                                     {
@@ -1319,7 +1287,7 @@ int main(void)
         S_flag[i] = 0;
 
     for (int i = 0; i < num; ++i)
-        delta_thrd[i] = 20;
+        delta_thrd[i] = 30;
 
     for (int i = 0; i < num; ++i)
         amp_thrd[i] = 1.2;
@@ -1347,8 +1315,39 @@ int main(void)
         initDynamicArray(&smooth_derivative_sensors[i], 50);
         amp_tmp_list[i].x = amp_tmp_list[i].y = amp_tmp_list[i].z = amp_tmp_list[i].total = 0;
     }
+    HANDLE hSerial = CreateFile(COM_PORT, GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
+    if (hSerial == INVALID_HANDLE_VALUE)
+    {
+        // Handle error opening the serial port
+        _tprintf(_T("Error opening COM port\n"));
+        return 1;
+    }
+
+    DCB dcbSerialParams = { 0 };
+    dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
+
+    if (!GetCommState(hSerial, &dcbSerialParams))
+    {
+        // Handle error getting serial port state
+        _tprintf(_T("Error getting serial port state\n"));
+        CloseHandle(hSerial);
+        return 1;
+    }
+
+    dcbSerialParams.BaudRate = CBR_115200;  // Adjust baud rate as needed
+    dcbSerialParams.ByteSize = 8;
+    dcbSerialParams.StopBits = ONESTOPBIT;
+    dcbSerialParams.Parity = NOPARITY;
+
+    if (!SetCommState(hSerial, &dcbSerialParams))
+    {
+        // Handle error setting serial port state
+        _tprintf(_T("Error setting serial port state\n"));
+        CloseHandle(hSerial);
+        return 1;
+    }
     // run the main loop
-    detect_mag();
+    detect_mag(hSerial);
     return 1;
 }
