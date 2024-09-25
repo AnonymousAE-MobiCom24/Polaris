@@ -452,6 +452,7 @@ def detectMag():
                     tag_info = []
             n = n + 1
             cnt += 1
+            
     except KeyboardInterrupt:
         # Record the data
         print("Output csv")
